@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Domination Game</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #17202a;
+      color: #fff;
+    }
+
+    header {
+      background: #0b0f14;
+      padding: 20px;
+      text-align: center;
+      border-bottom: 3px solid #3498db;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+
+    header p {
+      margin: 8px 0 0;
+      color: #aaa;
+    }
+
+    .game-container {
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      gap: 20px;
+      max-width: 1500px;
+      margin: 20px auto;
+      padding: 0 20px;
+    }
+
+    .board-container {
+      position: relative;
+      min-height: 700px;
+      overflow: hidden;
+      border: 3px solid #566573;
+      border-radius: 15px;
+      background:
+        radial-gradient(circle at 20% 30%, #2471a3 0 12%, transparent 13%),
+        radial-gradient(circle at 75% 25%, #2980b9 0 10%, transparent 11%),
+        radial-gradient(circle at 45% 70%, #1f618d 0 14%, transparent 15%),
+        linear-gradient(135deg, #154360, #21618c);
+    }
+
+    .ocean {
+      position: absolute;
+      inset: 0;
+      opacity: 0.35;
+      background-image:
+        linear-gradient(45deg, transparent 45%, rgba(255,255,255,.08) 50%, transparent 55%);
+      background-size: 50px 50px;
+    }
+
+    .island {
+      position: absolute;
+      width: 130px;
+      min-height: 95px;
+      padding: 10px;
+      border-radius: 45% 55% 50% 40%;
+      background: #d5f5e3;
+      color: #17202a;
+      border: 4px solid #7dcea0;
+      box-shadow: 0 6px 15px rgba(0,0,0,.4);
+      cursor: pointer;
+      transition: .2s;
+      text-align: center;
+    }
+
+    .island:hover {
+      transform: scale(1.05);
+    }
+
+    .island.main {
+      background: #f9e79f;
+      border-color: #f1c40f;
+    }
+
+    .island-name {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .island-number {
+      font-size: .8rem;
+      color: #555;
+    }
+
+    .island-owner {
+      font-size: .75rem;
+      margin-top: 5px;
+      font-weight: bold;
+    }
+
+    .pieces {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 3px;
+      margin-top: 5px;
+    }
+
+    .piece {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 1px 3px #000;
+    }
+
+    .red { background: #e74c3c; }
+    .blue { background: #3498db; }
+    .green { background: #2ecc71; }
+    .yellow { background: #f1c40f; }
+
+    .sidebar {
+      background: #212f3d;
+      border-radius: 12px;
+      padding: 20px;
+      height: fit-content;
+      border: 1px solid #566573;
+    }
+
+    .panel {
+      background: #1b2631;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+
+    .panel h2 {
+      margin-top: 0;
+      font-size: 1.1rem;
+      color: #5dade2;
+    }
+
+    .player {
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border-left: 5px solid;
+      background: #273746;
+    }
+
+    .player.active {
+      background: #34495e;
+      box-shadow: 0 0 10px rgba(52,152,219,.5);
+    }
+
+    .resources {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+      margin-top: 8px;
+    }
+
+    .resource {
+      background: #34495e;
+      border-radius: 5px;
+      padding: 5px;
+      text-align: center;
+      font-size: .75rem;
+    }
+
+    button {
+      width: 100%;
+      border: none;
+      padding: 11px;
+      border-radius: 7px;
+      margin-top: 7px;
+      cursor: pointer;
+      font-weight: bold;
+      color: white;
+      background: #2980b9;
+    }
+
+    button:hover {
+      background: #3498db;
+    }
+
+    button:disabled {
+      background: #566573;
+      cursor: not-allowed;
+    }
+
+    .attack {
+      background: #c0392b;
+    }
+
+    .attack:hover {
+      background: #e74c3c;
+    }
+
+    .build {
+      background: #27ae60;
+    }
+
+    .build:hover {
+      background: #2ecc71;
+    }
+
+    .log {
+      height: 180px;
+      overflow-y: auto;
+      background: #111;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: .8rem;
+    }
+
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid #222;
+    }
+
+    .dice {
+      text-align: center;
+      font-size: 4rem;
+      font-weight: bold;
+      color: #f1c40f;
+      padding: 10px;
+    }
+
+    .current-player {
+      font-size: 1.2rem;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .rules {
+      max-width: 1500px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #212f3d;
+      border-radius: 12px;
+    }
+
+    .rules h2 {
+      color: #5dade2;
+    }
+
+    .rules h3 {
+      color: #f1c40f;
+    }
+
+    .rules ul {
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1000px) {
+      .game-container {
+        grid-template-columns: 1fr;
+      }
+
+      .board-container {
+        min-height: 600px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>🌎 Domination Game</h1>
+  <p>2–4 Player Island Conquest</p>
+</header>
+
+<div class="game-container">
+
+  <div class="board-container" id="board">
+    <div class="ocean"></div>
+
+    <div class="island main" style="left: 8%; top: 10%;" data-island="0">
+      <div class="island-name">North America</div>
+      <div class="island-number">Main Island</div>
+      <div class="island-owner">Neutral</div>
+    </div>
+
+    <div class="island" style="left: 42%; top: 8%;" data-island="1">
+      <div class="island-name">Frost Isle</div>
+      <div class="island-number">Roll: 2</div>
+      <div class="island-owner">Unclaimed</div>
+    </div>
+
+    <div class="island" style="left: 72%; top: 13%;" data-island="2">
+      <div class="island-name">Iron Isle</div>
+      <div class="island-number">Roll: 5</div>
+      <div class="island-owner">Unclaimed</div>
+    </div>
+
+    <div class="island" style="left: 20%; top: 38%;" data-island="3">
+      <div class="island-name">Forest Isle</div>
+      <div class="island-number">Roll: 4</div>
+      <div class="island-owner">Unclaimed</div>
+    </div>
+
+    <div class="island" style="left: 55%; top: 35%;" data-island="4">
+      <div class="island-name">Wheat Isle</div>
+      <div class="island-number">Roll: 6</div>
+      <div class="island-owner">Unclaimed</div>
+    </div>
+
+    <div class="island" style="left: 78%; top: 47%;" data-island="5">
+      <div class="island-name">Wool Isle</div>
+      <div class="island-number">Roll: 3</div>
+      <div class="island-owner">Unclaimed</div>
+    </div>
+
+    <div class="island" style="left: 10%; top: 68%;" data-island="6">
+      <div class="island-name">Brick Isle</div>
+      <div class="island-number">Roll: 8</div>
+      <div class="island-owner">Unclaimed</div>
+    </div>
+
+    <div class="island" style="left: 40%; top: 72%;" data-island="7">
+      <div class="island-name">Golden Isle</div>
+      <div class="island-number">Roll: 9</div>
+      <div class="island-owner">Unclaimed</div>
+    </div>
+
+    <div class="island main" style="left: 70%; top: 72%;" data-island="8">
+      <div class="island-name">South America</div>
+      <div class="island-number">Main Island</div>
+      <div class="island-owner">Neutral</div>
+    </div>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="panel">
+      <div class="current-player">
+        Current Turn:
+        <span id="currentPlayer">Player 1</span>
+      </div>
+
+      <div class="dice" id="dice">🎲</div>
+
+      <button id="rollButton" onclick="game.rollResources()">
+        Roll for Resources
+      </button>
+
+      <button onclick="game.endTurn()">
+        End Turn
+      </button>
+    </div>
+
+    <div class="panel">
+      <h2>Players</h2>
+      <div id="players"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Actions</h2>
+
+      <button class="build" onclick="game.buildVillage()">
+        🏘️ Build Village — 1 Wood + 1 Brick
+      </button>
+
+      <button class="build" onclick="game.buildCity()">
+        🏙️ Build City — 2 Ore + 1 Wheat
+      </button>
+
+      <button class="build" onclick="game.buildArmy()">
+        ⚔️ Build Army — 1 Ore + 1 Wheat
+      </button>
+
+      <button class="build" onclick="game.buildDefense()">
+        🛡️ Build Defense — 2 Brick
+      </button>
+
+      <button onclick="game.buildBoat()">
+        ⛵ Build Boat — 1 Wood + 1 Wool
+      </button>
+
+      <button onclick="game.upgradeArmy()">
+        ⬆️ Upgrade Army — 1 Ore + 1 Wool
+      </button>
+
+      <button class="attack" onclick="game.attack()">
+        ⚔️ Attack Selected Island
+      </button>
+    </div>
+
+    <div class="panel">
+      <h2>Game Log</h2>
+      <div class="log" id="log"></div>
+    </div>
+
+  </aside>
+</div>
+
+<section class="rules">
+
+  <h2>Domination Game Rules</h2>
+
+  <h3>Game Components</h3>
+  <ul>
+    <li><strong>Game Board:</strong> A world map divided into islands scattered across the board.</li>
+    <li><strong>Resource Cards:</strong> Brick, Ore, Wool, Wheat, and Wood.</li>
+    <li><strong>Player Pieces:</strong> Armies, upgraded armies, Cities, Villages, Defenses, and Boats.</li>
+    <li><strong>Dice:</strong> Players roll for resources each turn.</li>
+  </ul>
+
+  <h3>Setup</h3>
+  <ul>
+    <li>Each player starts on a chosen island with their color-coded castle.</li>
+    <li>Place all player pieces in a pile near the board.</li>
+    <li>With 2 players, start on opposite diagonal territories.</li>
+    <li>With 3–4 players, players may start anywhere.</li>
+    <li>Begin with 1 of each resource.</li>
+    <li>Organize resource cards into separate piles.</li>
+  </ul>
+
+  <h3>Income</h3>
+  <ul>
+    <li>Roll one die every turn.</li>
+    <li>Collect 1 resource corresponding to your roll.</li>
+    <li>If you own an island with the matching number, receive 2 resources.</li>
+    <li>If you have a City on the island, receive 1 resource when another player rolls that number.</li>
+    <li>You must have a Village or City on an island to claim its resources.</li>
+  </ul>
+
+  <h3>Resource Types</h3>
+  <ul>
+    <li>🪵 Wood</li>
+    <li>🧱 Brick</li>
+    <li>🌾 Wheat</li>
+    <li>🐑 Wool</li>
+    <li>⛏️ Ore</li>
+    <li>🃏 Wild — choose any resource</li>
+  </ul>
+
+  <h3>Building</h3>
+  <ul>
+    <li>Build armies on islands you own, except main islands.</li>
+    <li>Build Villages or Cities on unclaimed islands.</li>
+    <li>You need a Boat to reach a new island, but Boats can be reused.</li>
+    <li>Main islands cannot have defenses or armies.</li>
+    <li>Each main island automatically has +3 defense.</li>
+  </ul>
+
+  <h3>Combat</h3>
+  <ul>
+    <li>You need a Boat and an Army to attack another island.</li>
+    <li>Attacking a Village gives the defender -2 to their roll.</li>
+    <li>Attacking a City gives the defender -1 to their roll.</li>
+    <li>If an Army is present, both players roll a die.</li>
+    <li>The higher roll wins.</li>
+    <li>A Defense gives the defender +2.</li>
+    <li>Only one Defense is allowed per island.</li>
+    <li>Armies and Defenses together grant the defender +2.</li>
+    <li>A single-upgraded Army gets +1 when attacking.</li>
+    <li>A double-upgraded Army gets +2 when attacking.</li>
+    <li>Upgraded Army bonuses do not apply while defending.</li>
+    <li>In a tie, the attacker wins.</li>
+    <li>If the attacker wins, enemy pieces are returned to the bank.</li>
+    <li>If the attacker loses, their attacking Army is returned to the bank.</li>
+  </ul>
+
+  <h3>Winning</h3>
+  <ul>
+    <li><strong>Elimination:</strong> Conquer all other players.</li>
+    <li>When a player is defeated, take their resource cards and remove their pieces.</li>
+    <li><strong>Conquering:</strong> Conquer all islands.</li>
+  </ul>
+
+  <h3>Trading</h3>
+  <ul>
+    <li>Players may freely negotiate trades with each other.</li>
+    <li>Trades must be mutually agreed upon.</li>
+    <li>Trade 2 of the same resource to the bank for 1 different resource.</li>
+  </ul>
+
+  <h3>Upgrading</h3>
+  <ul>
+    <li>A single upgrade grants +1 to attack rolls.</li>
+    <li>A double upgrade grants +2 to attack rolls.</li>
+    <li>You can upgrade 3 armies once each.</li>
+    <li>You can upgrade 1 army twice.</li>
+    <li>Upgrades are purchased with resources.</li>
+    <li>Upgrade bonuses only apply when attacking.</li>
+  </ul>
+
+  <h3>Other Information</h3>
+  <ul>
+    <li><strong>Players:</strong> 2–4</li>
+    <li><strong>Game Length:</strong> TBD</li>
+  </ul>
+
+</section>
+
+<script type="text/typescript">
+
+type Resource =
+  | "Wood"
+  | "Brick"
+  | "Wheat"
+  | "Wool"
+  | "Ore"
+  | "Wild";
+
+type PlayerColor =
+  | "red"
+  | "blue"
+  | "green"
+  | "yellow";
+
+interface Resources {
+  Wood: number;
+  Brick: number;
+  Wheat: number;
+  Wool: number;
+  Ore: number;
+  Wild: number;
+}
+
+interface Island {
+  id: number;
+  name: string;
+  number?: number;
+  main: boolean;
+  owner: number | null;
+  village: boolean;
+  city: boolean;
+  armies: number;
+  upgradedArmies: number;
+  doubleUpgradedArmies: number;
+  defense: boolean;
+}
+
+interface Player {
+  id: number;
+  name: string;
+  color: PlayerColor;
+  resources: Resources;
+  boats: number;
+  eliminated: boolean;
+}
+
+class DominationGame {
+
+  players: Player[] = [
+    {
+      id: 0,
+      name: "Player 1",
+      color: "red",
+      resources: {
+        Wood: 1,
+        Brick: 1,
+        Wheat: 1,
+        Wool: 1,
+        Ore: 1,
+        Wild: 0
+      },
+      boats: 1,
+      eliminated: false
+    },
+    {
+      id: 1,
+      name: "Player 2",
+      color: "blue",
+      resources: {
+        Wood: 1,
+        Brick: 1,
+        Wheat: 1,
+        Wool: 1,
+        Ore: 1,
+        Wild: 0
+      },
+      boats: 1,
+      eliminated: false
+    },
+    {
+      id: 2,
+      name: "Player 3",
+      color: "green",
+      resources: {
+        Wood: 1,
+        Brick: 1,
+        Wheat: 1,
+        Wool: 1,
+        Ore: 1,
+        Wild: 0
+      },
+      boats: 1,
+      eliminated: false
+    },
+    {
+      id: 3,
+      name: "Player 4",
+      color: "yellow",
+      resources: {
+        Wood: 1,
+        Brick: 1,
+        Wheat: 1,
+        Wool: 1,
+        Ore: 1,
+        Wild: 0
+      },
+      boats: 1,
+      eliminated: false
+    }
+  ];
+
+  islands: Island[] = [
+    {
+      id: 0,
+      name: "North America",
+      main: true,
+      owner: null,
+      village: false,
+      city: false,
+      armies: 0,
+      upgradedArmies: 0,
+      doubleUpgradedArmies: 0,
+      defense: false
+    },
+    {
+      id: 1,
+      name: "Frost Isle",
+      number: 2,
+      main: false,
+      owner: null,
+      village: false,
+      city: false,
+      armies: 0,
+      upgradedArmies: 0,
+      doubleUpgradedArmies: 0,
+      defense: false
+    },
+    {
+      id: 2,
+      name: "Iron Isle",
+      number: 5,
+      main: false,
+      owner: null,
+      village: false,
+      city: false,
+      armies: 0,
+      upgradedArmies: 0,
+      doubleUpgradedArmies: 0,
+      defense: false
+    },
+    {
+      id: 3,
+      name: "Forest Isle",
+      number: 4,
+      main: false,
+      owner: null,
+      village: false,
+      city: false,
+      armies: 0,
+      upgradedArmies: 0,
+      doubleUpgradedArmies: 0,
+      defense: false
+    },
+    {
+      id: 4,
+      name: "Wheat Isle",
+      number: 6,
+      main: false,
+      owner: null,
+      village: false,
+      city: false,
+      armies: 0,
+      upgradedArmies: 0,
+      doubleUpgradedArmies: 0,
+      defense: false
+    },
+    {
+      id: 5,
+      name: "Wool Isle",
+      number: 3,
+      main: false,
+      owner: null,
+      village: false,
+      city: false,
+      armies: 0,
+      upgradedArmies: 0,
+      doubleUpgradedArmies: 0,
+      defense: false
+    },
+    {
+      id: 6,
+      name: "Brick Isle",
+      number: 8,
+      main: false,
+      owner: null,
+      village: false,
+      city: false,
+      armies: 0,
+      upgradedArmies: 0,
+      doubleUpgradedArmies: 0,
+      defense: false
+    },
+    {
+      id: 7,
+      name: "Golden Isle",
+      number: 9,
+      main: false,
+      owner: null,
+      village: false,
+      city: false,
+      armies: 0,
+      upgradedArmies: 0,
+      doubleUpgradedArmies: 0,
+      defense: false
+    },
+    {
+      id: 8,
+      name: "South America",
+      main: true,
+      owner: null,
+      village: false,
+      city: false,
+      armies: 0,
+      upgradedArmies: 0,
+      doubleUpgradedArmies: 0,
+      defense: false
+    }
+  ];
+
+  currentPlayer: number = 0;
+  selectedIsland: number | null = null;
+  hasRolled: boolean = false;
+
+  resourceForNumber: Record<number, Resource> = {
+    2: "Wool",
+    3: "Wheat",
+    4: "Wood",
+    5: "Ore",
+    6: "Wheat",
+    8: "Brick",
+    9: "Wood"
+  };
+
+  constructor() {
+    this.render();
+    this.log("Game started!");
+    this.log("Player 1's turn.");
+  }
+
+  get player(): Player {
+    return this.players[this.currentPlayer];
+  }
+
+  rollDie(): number {
+    return Math.floor(Math.random() * 6) + 1;
+  }
+
+  addResource(
+    player: Player,
+    resource: Resource,
+    amount: number
+  ): void {
+
+    if (resource === "Wild") {
+      player.resources.Wild += amount;
+      return;
+    }
+
+    player.resources[resource] += amount;
+  }
+
+  spend(
+    player: Player,
+    cost: Partial<Resources>
+  ): boolean {
+
+    for (const key in cost) {
+
+      const resource = key as Resource;
+      const amount = cost[resource] || 0;
+
+      if (player.resources[resource] < amount) {
+        return false;
+      }
+    }
+
+    for (const key in cost) {
+
+      const resource = key as Resource;
+      const amount = cost[resource] || 0;
+
+      player.resources[resource] -= amount;
+    }
+
+    return true;
+  }
+
+  rollResources(): void {
+
+    if (this.hasRolled) {
+      this.log("You have already rolled this turn.");
+      return;
+    }
+
+    const roll = this.rollDie();
+
+    document.getElementById("dice")!.textContent =
+      roll.toString();
+
+    this.hasRolled = true;
+
+    const resource = this.resourceForNumber[roll];
+
+    if (!resource) {
+      this.log(
+        `Rolled ${roll}. No normal resource is assigned to this number.`
+      );
+      this.render();
+      return;
+    }
+
+    let amount = 1;
+
+    const ownedIsland = this.islands.find(
+      island =>
+        island.owner === this.currentPlayer &&
+        island.number === roll &&
+        (island.village || island.city)
+    );
+
+    if (ownedIsland) {
+      amount = 2;
+    }
+
+    this.addResource(this.player, resource, amount);
+
+    this.log(
+      `${this.player.name} rolled ${roll} and received ${amount} ${resource}.`
+    );
+
+    // Cities give 1 resource when another player rolls the number.
+    this.islands.forEach(island => {
+
+      if (
+        island.owner !== null &&
+        island.owner !== this.currentPlayer &&
+        island.city &&
+        island.number === roll
+      ) {
+
+        this.addResource(
+          this.players[island.owner],
+          resource,
+          1
+        );
+
+        this.log(
+          `${this.players[island.owner].name}'s City generated 1 ${resource}.`
+        );
+      }
+    });
+
+    this.render();
+  }
+
+  endTurn(): void {
+
+    if (!this.hasRolled) {
+      this.log("You must roll for resources before ending your turn.");
+      return;
+    }
+
+    let nextPlayer = this.currentPlayer;
+
+    do {
+      nextPlayer =
+        (nextPlayer + 1) % this.players.length;
+    } while (
+      this.players[nextPlayer].eliminated &&
+      nextPlayer !== this.currentPlayer
+    );
+
+    this.currentPlayer = nextPlayer;
+    this.hasRolled = false;
+
+    document.getElementById("dice")!.textContent = "🎲";
+
+    this.log(`${this.player.name}'s turn.`);
+
+    this.render();
+  }
+
+  selectIsland(id: number): void {
+
+    this.selectedIsland = id;
+
+    const island = this.islands[id];
+
+    this.log(`Selected ${island.name}.`);
+
+    this.render();
+  }
+
+  getSelectedIsland(): Island | null {
+
+    if (this.selectedIsland === null) {
+      return null;
+    }
+
+    return this.islands[this.selectedIsland];
+  }
+
+  buildVillage(): void {
+
+    const island = this.getSelectedIsland();
+
+    if (!island) {
+      this.log("Select an island first.");
+      return;
+    }
+
+    if (island.main) {
+      this.log("You cannot build a Village on a main island.");
+      return;
+    }
+
+    if (island.owner !== null) {
+      this.log("That island is already claimed.");
+      return;
+    }
+
+    if (
+      !this.spend(this.player, {
+        Wood: 1,
+        Brick: 1
+      })
+    ) {
+      this.log("You need 1 Wood and 1 Brick.");
+      return;
+    }
+
+    if (this.player.boats <= 0) {
+      this.log("You need a Boat to establish a new base.");
+      return;
+    }
+
+    island.owner = this.currentPlayer;
+    island.village = true;
+
+    this.log(
+      `${this.player.name} established a Village on ${island.name}.`
+    );
+
+    this.render();
+  }
+
+  buildCity(): void {
+
+    const island = this.getSelectedIsland();
+
+    if (!island) {
+      this.log("Select an island first.");
+      return;
+    }
+
+    if (island.owner !== this.currentPlayer) {
+      this.log("You must own this island.");
+      return;
+    }
+
+    if (island.city) {
+      this.log("This island already has a City.");
+      return;
+    }
+
+    if (
+      !this.spend(this.player, {
+        Ore: 2,
+        Wheat: 1
+      })
+    ) {
+      this.log("You need 2 Ore and 1 Wheat.");
+      return;
+    }
+
+    island.city = true;
+    island.village = true;
+
+    this.log(
+      `${this.player.name} built a City on ${island.name}.`
+    );
+
+    this.render();
+  }
+
+  buildArmy(): void {
+
+    const island = this.getSelectedIsland();
+
+    if (!island) {
+      this.log("Select an island first.");
+      return;
+    }
+
+    if (island.main) {
+      this.log("You cannot build armies on main islands.");
+      return;
+    }
+
+    if (island.owner !== this.currentPlayer) {
+      this.log("You must own this island.");
+      return;
+    }
+
+    if (
+      !this.spend(this.player, {
+        Ore: 1,
+        Wheat: 1
+      })
+    ) {
+      this.log("You need 1 Ore and 1 Wheat.");
+      return;
+    }
+
+    island.armies++;
+
+    this.log(
+      `${this.player.name} built an Army on ${island.name}.`
+    );
+
+    this.render();
+  }
+
+  buildDefense(): void {
+
+    const island = this.getSelectedIsland();
+
+    if (!island) {
+      this.log("Select an island first.");
+      return;
+    }
+
+    if (island.main) {
+      this.log(
+        "Main islands already have +3 defense."
+      );
+      return;
+    }
+
+    if (island.owner !== this.currentPlayer) {
+      this.log("You must own this island.");
+      return;
+    }
+
+    if (island.defense) {
+      this.log("Only one Defense is allowed per island.");
+      return;
+    }
+
+    if (
+      !this.spend(this.player, {
+        Brick: 2
+      })
+    ) {
+      this.log("You need 2 Brick.");
+      return;
+    }
+
+    island.defense = true;
+
+    this.log(
+      `${this.player.name} built a Defense on ${island.name}.`
+    );
+
+    this.render();
+  }
+
+  buildBoat(): void {
+
+    if (
+      !this.spend(this.player, {
+        Wood: 1,
+        Wool: 1
+      })
+    ) {
+      this.log("You need 1 Wood and 1 Wool.");
+      return;
+    }
+
+    this.player.boats++;
+
+    this.log(
+      `${this.player.name} built a Boat.`
+    );
+
+    this.render();
+  }
+
+  upgradeArmy(): void {
+
+    const island = this.getSelectedIsland();
+
+    if (!island) {
+      this.log("Select an island first.");
+      return;
+    }
+
+    if (island.owner !== this.currentPlayer) {
+      this.log("You must own this island.");
+      return;
+    }
+
+    if (island.armies <= 0) {
+      this.log("There must be an Army on this island.");
+      return;
+    }
+
+    if (
+      !this.spend(this.player, {
+        Ore: 1,
+        Wool: 1
+      })
+    ) {
+      this.log("You need 1 Ore and 1 Wool.");
+      return;
+    }
+
+    island.armies--;
+
+    if (island.upgradedArmies < 3) {
+      island.upgradedArmies++;
+      this.log(
+        `${this.player.name} upgraded an Army (+1 attack).`
+      );
+    } else if (island.doubleUpgradedArmies < 1) {
+      island.doubleUpgradedArmies++;
+      this.log(
+        `${this.player.name} double-upgraded an Army (+2 attack).`
+      );
+    } else {
+      island.armies++;
+      this.log("Maximum Army upgrades reached.");
+    }
+
+    this.render();
+  }
+
+  attack(): void {
+
+    const target = this.getSelectedIsland();
+
+    if (!target) {
+      this.log("Select an island to attack.");
+      return;
+    }
+
+    if (target.owner === this.currentPlayer) {
+      this.log("You cannot attack your own island.");
+      return;
+    }
+
+    if (this.player.boats <= 0) {
+      this.log("You need a Boat to attack.");
+      return;
+    }
+
+    const attackerIsland = this.islands.find(
+      island =>
+        island.owner === this.currentPlayer &&
+        island.armies +
+        island.upgradedArmies +
+        island.doubleUpgradedArmies > 0
+    );
+
+    if (!attackerIsland) {
+      this.log("You need an Army to attack.");
+      return;
+    }
+
+    const attackerRoll = this.rollDie();
+
+    let attackBonus = 0;
+
+    if (attackerIsland.doubleUpgradedArmies > 0) {
+      attackBonus = 2;
+    } else if (attackerIsland.upgradedArmies > 0) {
+      attackBonus = 1;
+    }
+
+    const attackTotal =
+      attackerRoll + attackBonus;
+
+    let defenseRoll = this.rollDie();
+    let defenseBonus = 0;
+
+    if (target.defense) {
+      defenseBonus += 2;
+    }
+
+    if (target.main) {
+      defenseBonus += 3;
+    }
+
+    if (
+      target.village &&
+      !target.city &&
+      target.armies === 0
+    ) {
+      defenseBonus -= 2;
+    }
+
+    if (
+      target.city &&
+      target.armies === 0
+    ) {
+      defenseBonus -= 1;
+    }
+
+    const defenseTotal =
+      defenseRoll + defenseBonus;
+
+    this.log(
+      `${this.player.name} attacked ${target.name}: ` +
+      `${attackerRoll} + ${attackBonus} = ${attackTotal}`
+    );
+
+    this.log(
+      `Defender rolled ${defenseRoll} + ${defenseBonus} = ${defenseTotal}`
+    );
+
+    // Ties go to attacker.
+    if (attackTotal >= defenseTotal) {
+
+      const defeatedOwner = target.owner;
+
+      if (defeatedOwner !== null) {
+        this.log(
+          `${this.players[defeatedOwner].name} lost ${target.name}.`
+        );
+      }
+
+      target.owner = this.currentPlayer;
+
+      target.village = true;
+      target.city = false;
+      target.armies = 0;
+      target.upgradedArmies = 0;
+      target.doubleUpgradedArmies = 0;
+      target.defense = false;
+
+      this.log(
+        `${this.player.name} conquered ${target.name}!`
+      );
+
+    } else {
+
+      attackerIsland.armies =
+        Math.max(0, attackerIsland.armies - 1);
+
+      this.log(
+        `${this.player.name}'s attack failed.`
+      );
+    }
+
+    this.checkElimination();
+
+    this.render();
+  }
+
+  checkElimination(): void {
+
+    this.players.forEach(player => {
+
+      if (player.eliminated) {
+        return;
+      }
+
+      const hasIsland =
+        this.islands.some(
+          island =>
+            island.owner === player.id
+        );
+
+      if (!hasIsland) {
+        player.eliminated = true;
+
+        this.log(
+          `${player.name} has been eliminated!`
+        );
+      }
+    });
+
+    const remaining =
+      this.players.filter(
+        player => !player.eliminated
+      );
+
+    if (remaining.length === 1) {
+
+      this.log(
+        `🏆 ${remaining[0].name} wins by elimination!`
+      );
+    }
+  }
+
+  log(message: string): void {
+
+    const logElement =
+      document.getElementById("log")!;
+
+    const entry =
+      document.createElement("div");
+
+    entry.className = "log-entry";
+    entry.textContent = message;
+
+    logElement.appendChild(entry);
+
+    logElement.scrollTop =
+      logElement.scrollHeight;
+  }
+
+  renderPlayers(): void {
+
+    const container =
+      document.getElementById("players")!;
+
+    container.innerHTML = "";
+
+    this.players.forEach(player => {
+
+      const element =
+        document.createElement("div");
+
+      element.className =
+        `player ${player.id === this.currentPlayer ? "active" : ""}`;
+
+      element.style.borderColor =
+        player.color;
+
+      element.innerHTML = `
+        <strong>${player.name}</strong>
+        ${player.eliminated ? " — ELIMINATED" : ""}
+        <br>
+        Boats: ${player.boats}
+
+        <div class="resources">
+          <div class="resource">🪵 ${player.resources.Wood}</div>
+          <div class="resource">🧱 ${player.resources.Brick}</div>
+          <div class="resource">🌾 ${player.resources.Wheat}</div>
+          <div class="resource">🐑 ${player.resources.Wool}</div>
+          <div class="resource">⛏️ ${player.resources.Ore}</div>
+          <div class="resource">🃏 ${player.resources.Wild}</div>
+        </div>
+      `;
+
+      container.appendChild(element);
+    });
+  }
+
+  renderIslands(): void {
+
+    const elements =
+      document.querySelectorAll(".island");
+
+    elements.forEach(element => {
+
+      const id =
+        Number(
+          (element as HTMLElement).dataset.island
+        );
+
+      const island =
+        this.islands[id];
+
+      const ownerText =
+        island.owner === null
+          ? "Unclaimed"
+          : this.players[island.owner].name;
+
+      const ownerColor =
+        island.owner === null
+          ? ""
+          : this.players[island.owner].color;
+
+      const ownerClass =
+        island.owner === null
+          ? ""
+          : ownerColor;
+
+      element.classList.toggle(
+        "selected",
+        id === this.selectedIsland
+      );
+
+      const ownerElement =
+        element.querySelector(".island-owner")!;
+
+      ownerElement.textContent =
+        ownerText;
+
+      ownerElement.className =
+        `island-owner ${ownerClass}`;
+
+      const oldPieces =
+        element.querySelector(".pieces");
+
+      if (oldPieces) {
+        oldPieces.remove();
+      }
+
+      const pieces =
+        document.createElement("div");
+
+      pieces.className = "pieces";
+
+      if (island.owner !== null) {
+
+        const player =
+          this.players[island.owner];
+
+        const totalArmies =
+          island.armies +
+          island.upgradedArmies +
+          island.doubleUpgradedArmies;
+
+        for (let i = 0; i < totalArmies; i++) {
+
+          const piece =
+            document.createElement("div");
+
+          piece.className =
+            `piece ${player.color}`;
+
+          pieces.appendChild(piece);
+        }
+
+        if (island.village) {
+
+          const village =
+            document.createElement("span");
+
+          village.textContent =
+            "🏘️";
+
+          pieces.appendChild(village);
+        }
+
+        if (island.city) {
+
+          const city =
+            document.createElement("span");
+
+          city.textContent =
+            "🏙️";
+
+          pieces.appendChild(city);
+        }
+
+        if (island.defense) {
+
+          const defense =
+            document.createElement("span");
+
+          defense.textContent =
+            "🛡️";
+
+          pieces.appendChild(defense);
+        }
+      }
+
+      element.appendChild(pieces);
+    });
+  }
+
+  render(): void {
+
+    document.getElementById(
+      "currentPlayer"
+    )!.textContent =
+      this.player.name;
+
+    this.renderPlayers();
+    this.renderIslands();
+
+    document.querySelectorAll(".island")
+      .forEach(element => {
+
+        const id =
+          Number(
+            (element as HTMLElement).dataset.island
+          );
+
+        element.onclick = () =>
+          this.selectIsland(id);
+      });
+  }
+}
+
+const game =
+  new DominationGame();
+
+</script>
+
+<!--
+  TypeScript compiler.
+  The game logic above is written in TypeScript.
+  To run this directly in a browser, this script compiles
+  the TypeScript code in the page into JavaScript.
+
+  For a production version, compile the TypeScript separately
+  with tsc and ship the resulting JavaScript file.
+-->
+<script src="https://cdn.jsdelivr.net/npm/typescript@5.7.3/lib/typescript.min.js"></script>
+
+<script>
+  /*
+   * Browser TypeScript bootstrapper.
+   *
+   * It takes the <script type="text/typescript"> block,
+   * transpiles it, and executes the resulting JavaScript.
+   */
+
+  window.addEventListener("DOMContentLoaded", () => {
+
+    const tsBlock =
+      document.querySelector(
+        'script[type="text/typescript"]'
+      );
+
+    if (!tsBlock) {
+      return;
+    }
+
+    const source =
+      tsBlock.textContent || "";
+
+    const compiled =
+      ts.transpile(
+        source,
+        {
+          target: ts.ScriptTarget.ES2020,
+          module: ts.ModuleKind.None
+        }
+      );
+
+    const script =
+      document.createElement("script");
+
+    script.textContent = compiled;
+
+    document.body.appendChild(script);
+  });
+</script>
+
+</body>
+</html>
